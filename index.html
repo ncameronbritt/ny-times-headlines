@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>D3 Page Template</title>
+        <script type="text/javascript" src="d3/d3.js"></script>
+        <style type="text/css">
+            body { font: 10px sans-serif;}
+
+            path {
+                stroke: MediumPurple;
+                stroke-width: 2;
+                fill:none;
+            }
+
+            .axis path,
+            .axis line {
+                fill: none;
+                stroke: grey;
+                stroke-width: 1;
+                shape-rendering: crispEdges;
+            }
+            .tip {
+                line-height: 1;
+                font-weight: bold;
+                padding: 12px;
+                background: rgba(0, 0, 0, 0.7);
+                color: #fff;
+                border-radius: 2px;
+            }
+
+        </style>
+    </head>
+    <body>
+        <script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>
+        <script type="text/javascript">
+            //Set the dimensions of the canvas / graph
+            var margin = {top: 75, right: 20, bottom: 60, left: 50},
+                width = 600 - margin.left - margin.right,
+                height = 350 - margin.top - margin.bottom;
+            
+
+            // Parse the date / time
+            var parseDate = d3.time.format("%Y-%m-%d").parse;
+
+            // Set the ranges
+            var x = d3.time.scale().range([0, width]);
+            var y = d3.scale.linear().range([height, 0]);
+
+            // Define the axes
+            var xAxis = d3.svg.axis().scale(x)
+                .orient("bottom")
+                .ticks(20);
+
+            var yAxis = d3.svg.axis().scale(y)
+                .orient("left")
+                .ticks(5);
+
+            // Define the line
+            var valueline = d3.svg.line()
+                .x(function(d) { return x(d.date); })
+                .y(function(d) { return y(d.article_count); });
+
+            var tip = d3.tip()
+                .attr("class", "tip")
+                .offset([-10, 0])
+                .html(function(d) {
+                    return "<strong>Date: </strong><span style='color:orange'>" + d.unformatted_date + " <br></span>" +
+                        "<strong>Number of articles: </strong><span style='color:orange'>" + d.article_count + "</span>" 
+                       ;
+                });
+                
+            // Adds the svg canvas
+            var svg = d3.select("body")
+                .append("svg")
+                    .attr("width", width + margin.left + margin.right)
+                    .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                    .attr("transform", 
+                          "translate(" + margin.left + "," + margin.top + ")");
+
+            // Get the data
+            d3.csv("ebola_headlines.csv", function(error, data) {
+                data.forEach(function(d) {
+                    d.unformatted_date = d.date;
+                    d.date = parseDate(d.date);
+                    d.article_count = +d.article_count;
+                    
+                    //console.log(d.article_count)
+                });
+
+                // Scale the range of the data
+                x.domain(d3.extent(data, function(d) { return d.date; }));
+                y.domain([0, d3.max(data, function(d) { return d.article_count; })]);
+
+                // Add the valueline path.
+                svg.append("path")
+                    .attr("class", "line")
+                    .attr("d", valueline(data));
+
+                // Add the scatterplot
+                svg.selectAll("dot")
+                    .data(data)
+                  .enter().append("circle")
+                    .attr("r", 3.5)
+                    .attr("cx", function(d) { return x(d.date); })
+                    .attr("cy", function(d) { return y(d.article_count); })
+                    .on('mouseover', tip.show)
+                    .on('mouseout', tip.hide);
+
+                // Add the X Axis
+                svg.append("g")
+                    .attr("class", "x axis")
+                    .attr("transform", "translate(0," + height + ")")
+                    .call(xAxis)
+                    .selectAll("text")
+                        .style("text-anchor", "end")
+                        .attr("dx", "-.8em")
+                        .attr("dy", "-.5em")
+                        .attr("transform", function(d) {
+                            return "rotate(-90)"
+                        });
+
+                // Add the Y Axis
+                svg.append("g")
+                    .attr("class", "y axis")
+                    .call(yAxis);
+
+                // Add label to Y axis
+                svg.append("text")
+                    .attr("class", "y label")
+                    .attr("text-anchor", "middle")
+                    .attr("y", 0 - margin.left/1.8)
+                    .attr("x", 0 - (height/2))
+                    .attr("transform", "rotate(-90)")
+                    .text("Number of Articles")    
+
+                // Add the tip    
+                svg.call(tip);
+
+            });
+
+        </script>
+    </body>
+</html>
